@@ -14,8 +14,8 @@
 #   (The GUI will automatically create radio buttons for any slot that is filled in.)
 # ----------------------------------------------------------------------------------------------------
 # Author:       Gerry Pidgeon
-# Created:      2025-11-06
-# Project:      Python Boilerplate
+# Created:      2025-11-07
+# Project:      GP Boilerplate
 # ====================================================================================================
 
 

@@ -13,8 +13,8 @@
 #
 # ----------------------------------------------------------------------------------------------------
 # Author:       Gerry Pidgeon
-# Created:      2025-11-06
-# Project:      Just Eat Orders-to-Cash Reconciliation
+# Created:      2025-11-07
+# Project:      GP Boilerplate
 # ====================================================================================================
 
 
@@ -52,6 +52,7 @@ import threading                                                            # Ru
 import contextlib                                                           # Manage temporary context scopes (e.g., redirect_stdout)
 import datetime as dt                                                       # Shortcut alias for datetime module (used as dt.date / dt.datetime)
 import calendar                                                             # Calendar operations (e.g., month ranges, weekday checks)
+from typing import Dict, List, Tuple, Optional, Any                         # Standard type hints used across the project
 
 # --- GUI-SPECIFIC IMPORTS ---
 import tkinter as tk                                                        # Standard Python GUI toolkit
@@ -82,3 +83,33 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload       # Ha
 import pandas as pd                                                         # (pip install pandas) Data analysis and manipulation
 import numpy as np                                                          # (installed with pandas) Numerical arrays, fast math ops
 import snowflake.connector                                                  # (pip install snowflake-connector-python) Run SQL in Snowflake
+
+# ====================================================================================================
+# 5. LOGGING CONFIGURATION
+# ----------------------------------------------------------------------------------------------------
+# Provides a consistent logging setup for all modules in the project.
+# Each time the boilerplate is imported, it ensures the logs directory exists
+# and that logging writes both to file and console with a standard format.
+# ====================================================================================================
+
+# Define log directory (relative to project root)
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Define log file name (timestamped daily)
+LOG_FILE = LOG_DIR / f"{dt.datetime.now():%Y-%m-%d}.log"
+
+# Define a common log format
+LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(threadName)s | %(message)s"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.INFO,                     # Default level (can override per module)
+    format=LOG_FORMAT,
+    datefmt=DATE_FORMAT,
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)

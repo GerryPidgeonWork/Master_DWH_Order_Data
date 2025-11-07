@@ -1,74 +1,51 @@
 # ====================================================================================================
 # P03_shared_functions.py
 # ----------------------------------------------------------------------------------------------------
+# Provides common reusable helper functions used across multiple project modules.
+#
 # Purpose:
-#   Contains small, reusable helper functions that are shared across multiple modules.
-#   These typically perform common cleanup or standardized I/O routines.
+#   - Centralise frequently used logic (file handling, timestamp formatting, data validation, etc.)
+#   - Avoid duplication by keeping shared functions in one consistent location.
+#   - Ensure consistent logging, formatting, and error handling across projects.
+#
+# Typical Functions (to be added as needed):
+#   - File utilities (e.g., safe file move/copy, timestamped filenames, CSV/JSON readers)
+#   - Date/time helpers (e.g., get_timestamp(), current_week_range())
+#   - Validation helpers (e.g., is_valid_email(), clean_string())
+#   - GUI-safe wrappers for threading or file dialogs
+#
+# Usage:
+#   from processes.P03_shared_functions import <function_name>
+#
+# Example:
+#   >>> from processes.P03_shared_functions import get_timestamp
+#   >>> get_timestamp()
+#   '2025-11-07_143512'
+#
 # ----------------------------------------------------------------------------------------------------
-# Current Functions:
-#   • normalize_columns(df) → Standardizes DataFrame column naming to lowercase with underscores.
-#   • read_sql_clean(conn, sql_query) → Executes SQL quietly and returns a cleaned DataFrame.
-# ----------------------------------------------------------------------------------------------------
-# Update Policy:
-#   Keep this file focused on small, generic utilities that do not depend on any specific
-#   provider or data schema. Larger, context-specific helpers should live elsewhere.
+# Author:       Gerry Pidgeon
+# Created:      2025-11-07
+# Project:      GP Boilerplate
 # ====================================================================================================
 
-# ----------------------------------------------------------------------------------------------------
+
+# ====================================================================================================
 # 1. SYSTEM IMPORTS
 # ----------------------------------------------------------------------------------------------------
 # Add parent directory to sys.path so this module can import other "processes" packages.
-# ----------------------------------------------------------------------------------------------------
-import sys                      # Provides access to system-specific parameters and functions
-from pathlib import Path        # Offers an object-oriented interface for filesystem paths
+# ====================================================================================================
+import sys
+from pathlib import Path
 
-# Add parent directory to system path to allow imports from `processes/`
+# --- Standard block for all modules ---
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.dont_write_bytecode = True  # Prevents creation of __pycache__ directories
+sys.dont_write_bytecode = True  # Prevents __pycache__ folders from being created
 
-# ----------------------------------------------------------------------------------------------------
+
+# ====================================================================================================
 # 2. PROJECT IMPORTS
 # ----------------------------------------------------------------------------------------------------
-# Import shared project packages (declared centrally in P00_set_packages.py)
-# ----------------------------------------------------------------------------------------------------
-from processes.P00_set_packages import *
-
-# ====================================================================================================
-# normalize_columns()
-# ====================================================================================================
-def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Standardize DataFrame column names for consistency across data sources.
-
-    Steps performed:
-        • Strips leading/trailing whitespace.
-        • Converts all column names to lowercase.
-        • Replaces spaces and hyphens with underscores.
-
-    Args:
-        df (pd.DataFrame): Input DataFrame whose columns will be renamed.
-
-    Returns:
-        pd.DataFrame: The same DataFrame with normalized column names.
-
-    Example:
-        >>> df.columns
-        Index(['Order ID', 'Payment-System', 'Created At'], dtype='object')
-        >>> normalize_columns(df).columns
-        Index(['order_id', 'payment_system', 'created_at'], dtype='object')
-    """
-    df.columns = (
-        df.columns
-        .str.strip()
-        .str.lower()
-        .str.replace(" ", "_")
-        .str.replace("-", "_")
-    )
-    return df
-
-
-# ====================================================================================================
-# read_sql_clean()
+# Bring in standard libraries and settings from the central import hub.
 # ====================================================================================================
 def read_sql_clean(conn, sql_query: str) -> pd.DataFrame:
     """

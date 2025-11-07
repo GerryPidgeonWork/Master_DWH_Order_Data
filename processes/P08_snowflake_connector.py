@@ -4,25 +4,29 @@
 # Purpose:
 #   Provides a simplified and multi-user-friendly connection layer to Snowflake via Okta SSO.
 #   This boilerplate is pre-configured for the Gopuff Snowflake environment.
-# ----------------------------------------------------------------------------------------------------
+#
 # Features:
 #   • Hardcoded for Gopuff Account and Email Domain (non-secret).
 #   • Accepts a user email from the GUI.
 #   • Automatically finds and sets the best available Role/Warehouse.
+#
 # ----------------------------------------------------------------------------------------------------
-# Usage (in a GUI):
+# Usage (example):
 #   from processes.P08_snowflake_connector import connect_to_snowflake
 #
-#   user_email = "gerry.pidgeon@gopuff.com" # Get this from GUI
+#   user_email = "user.name@gopuff.com"   # Retrieved from GUI input
 #   conn = connect_to_snowflake(email_address=user_email)
+#
+# ----------------------------------------------------------------------------------------------------
+# Author:       Gerry Pidgeon
+# Created:      2025-11-07
+# Project:      GP Boilerplate
 # ====================================================================================================
 
 
 # ====================================================================================================
 # 1. SYSTEM IMPORTS
 # ----------------------------------------------------------------------------------------------------
-# Add parent directory to sys.path so this module can import other "processes" packages.
-# ====================================================================================================
 import sys
 from pathlib import Path
 
@@ -34,30 +38,26 @@ sys.dont_write_bytecode = True  # Prevents __pycache__ folders from being create
 # ====================================================================================================
 # 2. PROJECT IMPORTS
 # ----------------------------------------------------------------------------------------------------
-# Bring in standard libraries and settings from the central import hub.
-# ====================================================================================================
-from processes.P00_set_packages import * # Imports all packages from P00_set_packages.py
+from processes.P00_set_packages import *  # Imports all packages from P00_set_packages.py
 
-# NOTE: We no longer import the user config here. The GUI is responsible for it.
+# NOTE: The GUI handles user configuration (P10_user_config.py). It is not imported here.
 
 
 # ====================================================================================================
-# 3. Default Snowflake Configuration
+# 3. DEFAULT SNOWFLAKE CONFIGURATION
 # ----------------------------------------------------------------------------------------------------
-# Configuration for the Gopuff Snowflake account and connection details.
+# Configuration for the Gopuff Snowflake account and Okta SSO authentication.
+# These are non-secret identifiers and safe for GitHub storage.
 # ====================================================================================================
 
-# --- Gopuff-specific Configuration (Hardcoded, not secrets) ---
 SNOWFLAKE_ACCOUNT = "HC77929-GOPUFF"
 SNOWFLAKE_EMAIL_DOMAIN = "gopuff.com"
 
-# --- Context Priority List ---
 CONTEXT_PRIORITY = [
     {"role": "OKTA_ANALYTICS_ROLE", "warehouse": "ANALYTICS"},
     {"role": "OKTA_READER_ROLE",    "warehouse": "READER_WH"},
 ]
 
-# --- Fallback defaults for database/schema ---
 DEFAULT_DATABASE = "DBT_PROD"
 DEFAULT_SCHEMA = "CORE"
 AUTHENTICATOR = "externalbrowser"
@@ -65,16 +65,18 @@ TIMEOUT_SECONDS = 20
 
 
 # ====================================================================================================
-# 4. get_snowflake_credentials()
+# 4. BUILD SNOWFLAKE CREDENTIALS
 # ----------------------------------------------------------------------------------------------------
 def _get_snowflake_credentials(email_address: str):
-    """(Internal) Builds the credentials dict from the provided email."""
-    
-    # Simple validation
+    """
+    (Internal)
+    Validate the provided email and return a credentials dictionary
+    suitable for Okta SSO authentication via the external browser method.
+    """
     if not email_address or "@" not in email_address:
-         print(f"❌ CRITICAL ERROR: Invalid email provided: '{email_address}'.")
-         return None
-        
+        print(f"❌ Invalid email provided: '{email_address}'.")
+        return None
+
     if not email_address.endswith(f"@{SNOWFLAKE_EMAIL_DOMAIN}"):
         print(f"❌ CRITICAL ERROR: Email '{email_address}' does not match domain '{SNOWFLAKE_EMAIL_DOMAIN}'.")
         return None
@@ -90,14 +92,17 @@ def _get_snowflake_credentials(email_address: str):
 
 
 # ====================================================================================================
-# 5. set_snowflake_context()
+# 5. SET SNOWFLAKE CONTEXT (ROLE, WAREHOUSE, DATABASE, SCHEMA)
 # ----------------------------------------------------------------------------------------------------
-def _set_snowflake_context(conn, role: str, warehouse: str, 
-                           database: str = DEFAULT_DATABASE, 
+def _set_snowflake_context(conn, role: str, warehouse: str,
+                           database: str = DEFAULT_DATABASE,
                            schema: str = DEFAULT_SCHEMA):
     """
-    (Internal) Set the Snowflake session context for the active connection.
-    Returns True on success, False on failure.
+    (Internal)
+    Set the Snowflake session context for the active connection.
+
+    Returns:
+        bool: True on success, False on failure.
     """
     print(f"\nAttempting to set context with Role={role}, Warehouse={warehouse}...")
     cur = conn.cursor()
@@ -119,26 +124,24 @@ def _set_snowflake_context(conn, role: str, warehouse: str,
 
 
 # ====================================================================================================
-# 6. connect_to_snowflake() - (PRIMARY PUBLIC FUNCTION)
+# 6. CONNECT TO SNOWFLAKE (PUBLIC FUNCTION)
 # ----------------------------------------------------------------------------------------------------
 def connect_to_snowflake(email_address: str):
     """
     Establish a Snowflake connection using Okta SSO and automatically set the
-    best available context (Role/Warehouse) based on a priority list.
-    
+    best available Role/Warehouse based on the priority list.
+
     Args:
-        email_address (str): The user's full @gopuff.com email address.
-    
+        email_address (str): Full user email (e.g. user.name@gopuff.com)
+
     Returns:
-        snowflake.connector.connection.SnowflakeConnection:
-            An active, context-set Snowflake connection object.
-            Returns None if connection or context-setting fails.
+        snowflake.connector.connection.SnowflakeConnection | None
     """
     creds = _get_snowflake_credentials(email_address)
     if not creds:
-        return None # Error was already printed
+        return None
 
-    conn_container = {} 
+    conn_container = {}
 
     def _connect():
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
@@ -156,55 +159,51 @@ def connect_to_snowflake(email_address: str):
     thread.join(timeout=TIMEOUT_SECONDS)
 
     if thread.is_alive():
-        print(f"⏰ Timeout: No authentication detected after {TIMEOUT_SECONDS} seconds. Exiting.")
+        print(f"⏰ Timeout: No authentication detected after {TIMEOUT_SECONDS} seconds.")
         return None
 
     if "error" in conn_container:
         err = str(conn_container["error"])
-        print(f"\n❌ Connection failed: {err}")
+        print(f"❌ Connection failed: {err}")
         if "differs from the user currently logged in" in err:
             print("Tip: Your browser may be logged into a different Okta account.")
             os.environ.pop("SNOWFLAKE_USER", None)
         return None
-    
+
     if "conn" not in conn_container:
-        print("\n❌ Unknown connection error. Exiting.")
+        print("❌ Unknown connection error.")
         return None
 
-    # --- Connection Successful, Now Find Context ---
+    # --- Connection successful ---
     conn = conn_container["conn"]
     print(f"✅ Connected successfully as {creds['user']}\n")
-    print("Finding available roles and warehouses...")
-    
+    print("Retrieving available roles and warehouses...")
+
     try:
         cur = conn.cursor()
         available_roles = {row[1] for row in cur.execute("SHOW ROLES;")}
-        available_warehouses = {row[0] for row in cur.execute("SHOW WAREHOUSES;")}
+        available_whs = {row[0] for row in cur.execute("SHOW WAREHOUSES;")}
         cur.close()
     except Exception as e:
-        print(f"❌ Error getting roles/warehouses: {e}")
+        print(f"❌ Error retrieving roles/warehouses: {e}")
         conn.close()
         return None
 
-    # --- Check Priority List ---
     for context in CONTEXT_PRIORITY:
         role = context["role"]
         wh = context["warehouse"]
-        
         print(f"Checking for: Role={role}, Warehouse={wh}...")
-        
-        if role in available_roles and wh in available_warehouses:
-            print(f"✅ Found matching context. Setting...")
+        if role in available_roles and wh in available_whs:
+            print("✅ Found matching context. Setting...")
             if _set_snowflake_context(conn, role, wh):
                 return conn
             else:
-                print(f"Failed to apply context {role}/{wh}. Trying next...")
+                print(f"⚠️ Failed to apply context {role}/{wh}. Trying next...")
         else:
             print("Context not available.")
 
-    # --- If loop finishes, no context was found/set ---
-    print("❌ Critical Error: No valid role/warehouse context found for this user.")
-    print("Please ensure you have access to one of the following pairs:")
+    print("❌ No valid role/warehouse context found.")
+    print("Ensure you have access to one of the following pairs:")
     for c in CONTEXT_PRIORITY:
         print(f"  - {c['role']} / {c['warehouse']}")
     conn.close()
@@ -212,33 +211,31 @@ def connect_to_snowflake(email_address: str):
 
 
 # ====================================================================================================
-# 7. Standalone test
+# 7. STANDALONE TEST
 # ----------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     """
-    Manual test runner for verifying the new connection and auto-context flow.
+    Manual test runner for verifying Snowflake connection and auto-context setup.
     """
     try:
-        # The test will now try to import the config file itself
         from processes.P10_user_config import EMAIL_SLOT_1
-        
+
         if not EMAIL_SLOT_1 or "firstname.lastname" in EMAIL_SLOT_1:
-            print("❌ Test Failed: Please set EMAIL_SLOT_1 in 'P10_user_config.py' to run the standalone test.")
+            print("❌ Test Failed: Please set EMAIL_SLOT_1 in 'P10_user_config.py' to run this test.")
             sys.exit(1)
-            
-        print(f"--- Running Standalone Test (as {EMAIL_SLOT_1}) ---")
+
+        print(f"--- Running Standalone Test ({EMAIL_SLOT_1}) ---")
         conn = connect_to_snowflake(email_address=EMAIL_SLOT_1)
-        
+
         if conn:
-            print("✅ Standalone test successful. Connection established and context set.")
-            
+            print("✅ Connection established successfully.")
             cur = conn.cursor()
             cur.execute("""
                 SELECT CURRENT_USER(), CURRENT_ACCOUNT(), CURRENT_ROLE(),
                        CURRENT_WAREHOUSE(), CURRENT_DATABASE(), CURRENT_SCHEMA();
             """)
             result = cur.fetchone()
-            print("\n--- Final Session Context ---")
+            print("\n--- Active Session Context ---")
             print(
                 f"👤 User: {result[0]}\n"
                 f"🏢 Account: {result[1]}\n"
@@ -252,14 +249,13 @@ if __name__ == "__main__":
             print("\n🔒 Connection closed cleanly.")
         else:
             print("❌ Standalone test failed. connect_to_snowflake() returned None.")
-    
+
     except ImportError:
         print("❌ Test Failed: 'processes/P10_user_config.py' not found.")
-        print("This test requires the config file to exist.")
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n❌ Connection aborted by user.")
         sys.exit(1)
     except Exception as e:
-        print(f"\nAn unexpected error occurred: {e}")
+        print(f"\n❌ Unexpected error: {e}")
         sys.exit(1)

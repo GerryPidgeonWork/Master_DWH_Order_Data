@@ -41,7 +41,7 @@ from processes.P09_gdrive_api import get_drive_service
 from processes.P02_system_processes import detect_os
 
 # --- Import the Main Application Window (P05b) ---
-from processes.P05b_gui_elements_main import MainApplicationWindow # CORRECTED IMPORT HERE
+from processes.P05b_gui_elements_main import DWHOrdersToCashGUI
 
 # --- Try to load the user config file ---
 try:
@@ -317,13 +317,12 @@ class ConnectionLauncher(tk.Tk):
         self.withdraw() 
         
         # *** THIS IS THE CORRECT LAUNCH LINE ***
-        main_app = MainApplicationWindow(
-            parent=self,
-            snowflake_conn=self.snowflake_conn,
-            gdrive_service=self.gdrive_service,
-            upload_method=self.upload_method.get(),
-            local_path=self.local_gdrive_path.get()
-        )
+        main_app = DWHOrdersToCashGUI( # <<< Use the new class name here
+        parent=self,
+        snowflake_conn=self.snowflake_conn,
+        gdrive_service=self.gdrive_service,
+        upload_method=self.upload_method.get(),
+        local_path=self.local_gdrive_path.get())
         print("Launcher: MainApplicationWindow is now running.")
 
 
