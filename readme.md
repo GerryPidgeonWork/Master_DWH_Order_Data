@@ -1,84 +1,98 @@
-# 🚀 GP Python Boilerplate (Universal GUI Framework)
+# 🧮 DWH Orders-to-Cash (Built on GP Python Boilerplate v1.1)
 
-A **modular, locked-core Python GUI boilerplate** designed for projects that require **Snowflake authentication (Okta SSO)** and **Google Drive integration (API or local mapped drive)**.
-It provides a fully reusable launcher workflow and structured layering — separating *locked shared components* from *project-specific logic*.
+A **Data Warehouse Orders-to-Cash extraction and export tool**, built on the **GP Python Boilerplate (Universal GUI Framework)**.
 
-This framework lets you spin up new finance, analytics, or automation tools rapidly — each with its own GUI — all built on the same stable foundation.
+This project connects to **Snowflake (Okta SSO)**, runs optimized SQL scripts to extract **order-level and item-level data**, merges them, and exports **provider-specific CSVs** into your shared Google Drive structure.
+
+It is a **Boilerplate-compliant implementation**, meaning:
+
+* All reusable components remain locked in `/processes`
+* All customization lives inside `/implementation`
+* It can be cloned or extended easily for new providers (Uber, Deliveroo, PayPal, etc.)
 
 ---
 
 ## 🌟 Key Features
 
-### 🔐 Authentication & Connections
+### 🔍 Data Extraction & Combination
 
-**Snowflake Connector (P08)**
+* Executes two Snowflake SQL queries:
 
-* Securely connects using **Okta SSO (externalbrowser)**.
-* Automatically sets the best role/warehouse based on a configurable priority list.
-* Reuses authenticated sessions when possible.
+  * `S01_order_level.sql`: Order metadata, transactions, and core financials
+  * `S02_item_level.sql`: Item-level VAT band details (0%, 5%, 20%)
+* Combines both datasets using consistent `gp_order_id` joins
+* Outputs a fully normalized, column-aligned DataFrame (`FINAL_DF_ORDER`)
 
-**Google Drive Connector (P09)**
+### 📦 Provider-Level Export
 
-* Supports **two methods**:
+* Automatically splits final data by **vendor group and payment system**
+* Exports one CSV per provider (Braintree, PayPal, Uber, Deliveroo, Just Eat, Amazon)
+* Saves outputs directly to each provider’s `/03 DWH` folder in Google Drive
 
-  * 🖥️ **Local mapped drive** (default): Choose your local `H:\` or equivalent shared path.
-  * ☁️ **API mode:** Uses Google Drive API with OAuth credentials for direct access.
+### 🔐 Authentication & Integration
 
-**Universal Launcher (P05a)**
+* **Snowflake Okta SSO** (externalbrowser)
+* **Google Drive integration** via mapped drive (default) or API credentials
+* Connection setup and authentication handled entirely by the **Universal Launcher**
 
-* Thread-safe, responsive GUI for connection setup.
-* Dynamically loads user emails from `P10_user_config.py`.
-* Passes live connection objects (Snowflake + Drive) into the project’s GUI.
+### 🪟 Unified GUI Workflow
 
-**Locked Core (P05b)**
+* Reuses the standard **Launcher + Main GUI** flow from the Boilerplate
+* Project GUI (`MainProjectGUI`) allows:
 
-* Provides consistent GUI layout, styling, and lifecycle management for all projects.
-* Ensures unified window structure and “Close Application” handling.
+  * Month selection and override
+  * Display of Snowflake connection status
+  * Real-time status logging inside a scrollable output box
+* Supports clean multithreaded background execution with safe shutdown
 
 ---
 
 ## 🧩 Folder & Module Structure
 
 ```
-GPPythonBoilerplate/
+DWHOrdersToCash/
 │
 ├── main/
-│   ├── M00_run_gui.py               # 🚀 Main entry point (starts universal launcher)
-│   └── M01_load_project_config.py   # Loads provider setup & routes to project launcher
+│   ├── M00_run_gui.py               # 🚀 Main entry (launches universal connection GUI)
+│   └── M01_load_project_config.py   # Routes to this project’s launcher
 │
 ├── implementation/
-│   ├── I01_project_launcher.py      # Project bridge — imports and launches GUI
-│   └── I02_gui_elements_main.py     # Project-specific GUI (inherits from BaseMainGUI)
+│   ├── I01_project_launcher.py      # Imports and launches DWHOrdersToCash Main GUI
+│   ├── I02_gui_elements_main.py     # MainProjectGUI — core extraction interface
+│   └── I03_combine_sql.py           # Executes SQLs, merges data, exports CSVs
 │
-├── processes/                       # 🔒 Locked, reusable core modules
-│   ├── P00_set_packages.py          # Central import hub (tkinter, pandas, etc.)
-│   ├── P01_set_file_paths.py        # Provider path initialisation (shared drive / GDrive)
-│   ├── P02_system_processes.py      # OS detection, path helpers
-│   ├── P05a_gui_elements_setup.py   # Universal connection launcher GUI
-│   ├── P05b_gui_elements_main.py    # Locked base GUI (structure, styling, lifecycle)
-│   ├── P08_snowflake_connector.py   # Handles Snowflake Okta login + role assignment
-│   ├── P09_gdrive_api.py            # Google Drive API service builder
-│   └── P10_user_config.py           # User-editable file (email slots, defaults)
+├── sql/
+│   ├── S01_order_level.sql          # Order-level data from Snowflake
+│   └── S02_item_level.sql           # Item-level VAT band aggregation
 │
-├── credentials/                     # (Optional) Google API OAuth credentials
-│   └── credentials.json
+├── processes/                       # 🔒 Locked boilerplate modules
+│   ├── P00_set_packages.py
+│   ├── P01_set_file_paths.py
+│   ├── P02_system_processes.py
+│   ├── P03_shared_functions.py
+│   ├── P04_static_lists.py
+│   ├── P05a_gui_elements_setup.py
+│   ├── P06_logging_utils.py
+│   ├── P07_module_configs.py
+│   ├── P08_snowflake_connector.py
+│   ├── P09_gdrive_api.py
+│   └── P10_user_config.py
 │
-└── .venv/                           # Local virtual environment
+└── credentials/
+    └── credentials.json   # (optional for API mode)
 ```
 
 ---
 
-## ⚙️ Setup & Configuration
+## ⚙️ Setup & Run Instructions
 
-### 🧰 Step 1 – Install Dependencies
-
-If a `requirements.txt` is provided:
+### Step 1 – Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Or install manually:
+or manually:
 
 ```bash
 pip install pandas snowflake-connector-python google-api-python-client google-auth-httplib2 google-auth-oauthlib
@@ -86,121 +100,74 @@ pip install pandas snowflake-connector-python google-api-python-client google-au
 
 ---
 
-### 📧 Step 2 – Configure User Emails
+### Step 2 – Configure Google Drive Root
 
-Edit the config file `processes/P10_user_config.py` and add your team’s emails:
-
-```python
-EMAIL_SLOT_1 = "firstname.lastname@gopuff.com"
-EMAIL_SLOT_2 = ""
-```
-
-Any blank or placeholder entry will be ignored.
+When the app starts, the launcher will ask you to select a **mapped drive** (e.g. `H:\`)
+This root is stored and passed dynamically to build all provider folder paths.
 
 ---
 
-### 🔑 Step 3 – (Optional) Google Drive API Setup
-
-If using the **API method** instead of a mapped drive:
-
-1. Visit [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable **Google Drive API**
-3. Create an **OAuth client ID** (type: Desktop App)
-4. Download and rename credentials as `credentials.json`
-5. Place it in the `/credentials/` folder
-
----
-
-## ▶️ Running the Application
-
-1. Open the terminal in your project root:
-
-   ```bash
-   cd GPPythonBoilerplate
-   ```
-2. Activate your virtual environment:
-
-   ```bash
-   .\.venv\Scripts\Activate.ps1
-   ```
-3. Launch the app:
-
-   ```bash
-   python main/M00_run_gui.py
-   ```
-
-🪟 The **Launcher Window** opens. Use it to:
-
-* Authenticate to **Snowflake** (Okta browser flow)
-* Connect to **Google Drive** (via API or mapped path)
-* Launch your project GUI automatically
-
----
-
-## 🧠 Building New Projects
-
-You can clone this boilerplate to create new, independent applications while reusing the same locked core.
-
-### 🪄 Step-by-Step
-
-1. **Duplicate this repository** and rename it (e.g., `InvoiceProcessor`, `FinanceReconciler`)
-2. Inside `/implementation/`, replace the placeholder files:
-
-   * `I01_project_launcher.py` → import your own GUI or workflow
-   * `I02_gui_elements_main.py` → define your own subclass of `BaseMainGUI`
-3. (Optional) Update metadata in `main/M01_load_project_config.py`
-4. Run your new project via `M00_run_gui.py`
-
-### Example
-
-```python
-# In I02_gui_elements_main.py
-from processes.P05b_gui_elements_main import BaseMainGUI
-
-class MyNewAppGUI(BaseMainGUI):
-    def build_gui(self):
-        ttk.Label(self.main_frame, text="Welcome to My Custom App", font=("Arial", 14, "bold")).pack(pady=20)
-        ttk.Button(self.main_frame, text="Run Report", command=self.run_report).pack(pady=10)
-
-    def run_report(self):
-        print("Running my project-specific logic...")
-```
-
-Now your app uses the same secure launcher, styling, and environment setup — but with your own GUI logic.
-
----
-
-## 🏗️ Building a Windows Executable (.exe)
-
-To distribute the app as a single binary:
+### Step 3 – Run the App
 
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --name "MyApp" --add-data "credentials;credentials" main/M00_run_gui.py
+python main/M00_run_gui.py
 ```
 
-Your executable will appear in `/dist/MyApp.exe`.
+You’ll see:
+
+1. Okta browser login (Snowflake)
+2. Optional Google Drive setup
+3. The main **DWH Orders-to-Cash GUI** window
+
+Click **▶ Run DWH Extraction** to execute the workflow.
 
 ---
 
-## 🧭 Architecture Overview
+## 📊 Outputs
+
+Each successful run generates:
+
+```
+H:\Shared drives\Automation Projects\Accounting\Orders to Cash\
+│
+├── 01 Braintree\03 DWH\YY.MM - Braintree DWH data.csv
+├── 02 Paypal\03 DWH\YY.MM - Paypal DWH data.csv
+├── 03 Uber Eats\03 DWH\YY.MM - Uber DWH data.csv
+├── 04 Deliveroo\03 DWH\YY.MM - Deliveroo DWH data.csv
+├── 05 Just Eat\03 DWH\YY.MM - Just Eat DWH data.csv
+└── 06 Amazon\03 DWH\YY.MM - Amazon DWH data.csv
+```
+
+Each file is fully cleaned, normalized, and ready for downstream reconciliation.
+
+---
+
+## 🧠 Architecture Summary
 
 ```
 M00_run_gui.py
-  └── starts → P05a_gui_elements_setup.ConnectionLauncher
-        └── after setup calls → M01_load_project_config.launch_project_main()
-              └── imports → implementation/I01_project_launcher.launch_main_app()
-                    └── instantiates → implementation/I02_gui_elements_main.MainProjectGUI()
+  └── P05a_gui_elements_setup.ConnectionLauncher
+        └── M01_load_project_config.launch_project_main()
+              └── I01_project_launcher.launch_main_app()
+                    └── I02_gui_elements_main.MainProjectGUI()
+                          └── I03_combine_sql.main()
 ```
-
-* 🔒 **P05a / P05b:** Universal locked core
-* 🧩 **I01 / I02:** Project layer (safe to edit)
-* 🚀 **M00 / M01:** Entry points + runtime config
 
 ---
 
-## 👤 Author
+## 🧩 Customization
 
-**Gerry Pidgeon**
-Created: November 2025
-Project: *GP Python Boilerplate (Snowflake & Google Drive)*
+If you need to adapt this for other data pipelines:
+
+* Replace SQL files in `/sql/`
+* Update transformation logic in `I03_combine_sql.py`
+* Keep the GUI and launcher unchanged — they’re already compliant with Boilerplate v1.1
+
+---
+
+## 🧱 Version & Author
+
+**Version:** 1.1-DWH (Boilerplate Compliant)
+**Author:** Gerry Pidgeon
+**Created:** November 2025
+**Project:** *Data Warehouse Orders-to-Cash (Snowflake → Shared Drive Export)*

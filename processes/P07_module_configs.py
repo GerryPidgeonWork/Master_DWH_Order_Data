@@ -16,29 +16,26 @@
 #   - Application version info, author metadata, and timestamps
 #
 # Usage:
-#   from processes.P07_module_configs import DEFAULT_WAREHOUSE, FILE_NAMING_RULES
+#   from processes.P07_module_configs import REPORTING_START_DATE, REPORTING_END_DATE
 #
 # Example:
-#   >>> from processes.P07_module_configs import SUPPORTED_PROVIDERS
-#   >>> SUPPORTED_PROVIDERS["justeat"]
-#   'Just Eat Orders-to-Cash'
+#   >>> from processes.P07_module_configs import REPORTING_START_DATE
+#   >>> print(REPORTING_START_DATE)
 #
 # ----------------------------------------------------------------------------------------------------
 # Author:       Gerry Pidgeon
 # Created:      2025-11-07
-# Project:      GP Boilerplate
+# Project:      DWHOrdersToCash (BoilerplateOrdersToCash v1.1)
 # ====================================================================================================
 
 
 # ====================================================================================================
 # 1. SYSTEM IMPORTS
 # ----------------------------------------------------------------------------------------------------
-# Add parent directory to sys.path so this module can import other "processes" packages.
-# ====================================================================================================
 import sys
 from pathlib import Path
 
-# --- Standard block for all modules ---
+# --- Standard boilerplate block ---
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.dont_write_bytecode = True  # Prevents __pycache__ folders from being created
 
@@ -46,6 +43,16 @@ sys.dont_write_bytecode = True  # Prevents __pycache__ folders from being create
 # ====================================================================================================
 # 2. PROJECT IMPORTS
 # ----------------------------------------------------------------------------------------------------
-# Bring in standard libraries and settings from the central import hub.
-# ====================================================================================================
 from processes.P00_set_packages import *  # Imports all packages from P00_set_packages.py
+
+
+# ====================================================================================================
+# 3. DYNAMIC RUNTIME VARIABLES (SET BY GUI)
+# ----------------------------------------------------------------------------------------------------
+# These variables are dynamically set by the DWH Orders-to-Cash GUI before executing the main process.
+# Integration:
+#   - I02_gui_elements_main.py sets the reporting period values when the user starts the extraction.
+#   - I03_combine_sql.py reads these values when constructing SQL query parameters.
+# ----------------------------------------------------------------------------------------------------
+REPORTING_START_DATE = ""
+REPORTING_END_DATE = ""
