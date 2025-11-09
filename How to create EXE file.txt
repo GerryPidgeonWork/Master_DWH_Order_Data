@@ -1,0 +1,6 @@
+The following commands will produce the executable files:
+
+# Scripts used for Importing Files
+
+pyinstaller --onefile --name "dwh_gui" --distpath "binary_files/dwh_gui/dist" --workpath "binary_files/dwh_gui/build" --specpath "binary_files/dwh_gui" --add-data "C:\Users\GerryPidgeon\CodingRepositoryWindows\Python\NewOrdersToCash\DWHOrdersToCash\sql;sql" --collect-data snowflake.connector --hidden-import "snowflake.connector.snow_logging" --hidden-import "snowflake.connector.arrow_result" --hidden-import "snowflake.connector.arrow_iterator" --hidden-import "snowflake.connector.connection" --hidden-import "snowflake.connector.cursor" main\M00_run_gui.py
+
